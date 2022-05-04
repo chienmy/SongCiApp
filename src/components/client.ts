@@ -33,10 +33,19 @@ export default class HttpClient {
     })
   }
 
-  public checkYun(pu: string, content: string, book:string) {
+  public checkYun(pu: string, content: string, book:string, strictMode: boolean) {
     return this.instance.post<number[]>("/pz/check", {
       pu: pu,
       content: content,
+      book: book,
+      strictMode: strictMode
+    })
+  }
+
+  public checkYunZi(yun: string[], yunGroup: string[][], book:string) {
+    return this.instance.post<number[][]>("/yun/check", {
+      yun: yun,
+      yunGroup: yunGroup,
       book: book
     })
   }

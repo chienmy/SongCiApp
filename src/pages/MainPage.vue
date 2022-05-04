@@ -1,13 +1,13 @@
 <script lang="ts">
 import {defineComponent, unref, Ref} from 'vue'
-import { NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio } from 'naive-ui'
+import { NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from 'naive-ui'
 import { InputInst } from 'naive-ui'
 import HttpClient from "../components/client";
 import { CiPu, Word } from "../components/model"
 
 export default defineComponent({
   components: {
-    NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTag, NTabPane, NSpace, NRadioGroup, NRadio
+    NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTag, NTabPane, NSpace, NRadioGroup, NRadio, NSwitch
   },
   computed: {
   },
@@ -24,6 +24,7 @@ export default defineComponent({
     contentList: new Array<Array<string>>(),
     // 输入框控制
     inputList: new Array<Array<Ref<InputInst>>>(),
+    // 声韵状态检查：-1 未知/空白；0 不符；1 符合；2 不确定；3 韵不符；5 韵不确定
     inputStatusList: new Array<number>(),
     // 各标签页词谱，分行列表格式
     ciPuList: new Array<Array<string>>(),
@@ -31,11 +32,15 @@ export default defineComponent({
     currentIndex: 0,
     //
     yunBook: "psy",
+    strictMode: false,
+    yunIndexMap: new Map<string, Array<number>>(),
+    // 候选词列表状态
+    wordListStatus: true,
     // 候选词列表
     wordList: new Array<Word>(),
-    cellHeight: 30,
-    cellWidth: 30,
-    cellMargin: 3,
+    cellHeight: 28,
+    cellWidth: 28,
+    cellMargin: 2,
     yunBookList: [{
       value: "psy",
       label: "平水韵"
@@ -82,25 +87,21 @@ export default defineComponent({
     getYunStyle(tabIndex: number, row: number, column: number) {
       // 设置颜色
       let code = this.inputStatusList[this.getIndex(tabIndex, row, column)]
-      let colorArray = ["black", "#c21f30", "#1a3b32", "#d9a40e"]
+      let colorArray = ["black", "#c21f30", "#1a6840", "#d9a40e", "#c21f3033", "", "#d9a40e33"]
       return {
-        position: 'absolute',
-        left: (column * this.cellWidth) + 'pt',
-        top: (2 * row * this.cellHeight) + 'pt',
         width: this.cellWidth + 'pt',
         textAlign: 'center',
         fontFamily: "CiPuSymbol",
-        fontSize: '18pt',
-        color: colorArray[code + 1]
+        fontSize: '16pt',
+        color: colorArray[code >= 2 ? code - 2: code + 1],
+        paddingTop: '3pt',
+        backgroundColor: code >= 2 ? colorArray[code + 1] : "none",
       }
     },
     getInputStyle(row: number, column: number) {
       return {
-        position: 'absolute',
-        left: (column * this.cellWidth) + 'pt',
-        top: ((2 * row + 1) * this.cellHeight) + 'pt',
         width: (this.cellWidth - this.cellMargin * 2) + 'pt',
-        margin: '0 ' + this.cellMargin + 'pt',
+        margin: this.cellMargin + 'pt',
         textAlign: 'center',
       }
     },
@@ -165,10 +166,13 @@ export default defineComponent({
         this.updateWordList(this.contentList[tabIndex][this.currentIndex - 1], row, column)
       }
     },
-    // 切换标签页时更新词谱
+    // 切换标签页时更新操作
     updatePu(ciPuId: number) {
       this.ciPuTab = ciPuId
+      // 更新候选词列表为空
       this.wordList = new Array<Word>()
+      this.currentIndex = 0
+      this.updateYunIndexMap()
       this.updateStatus()
     },
     // 更新候选词列表
@@ -189,13 +193,52 @@ export default defineComponent({
     updateStatus() {
       let pu = this.ciPuList[this.ciPuTab].join("")
       let content = this.contentList[this.ciPuTab].map((s) => s.length == 0 ? " " : s).join("")
-      this.client.checkYun(pu, content, this.yunBook)
+      this.client.checkYun(pu, content, this.yunBook, this.strictMode)
           .then((data) => {
             this.inputStatusList = new Array<number>()
             for (let code of data.data) {
               this.inputStatusList.push(code)
             }
+            // 检查韵字
+            let yun = Array.from(this.yunIndexMap.keys())
+            let yunGroup = new Array<Array<string>>(yun.length)
+            yun.forEach((y, i) => {
+              let group = new Array<string>()
+              this.yunIndexMap.get(y)?.forEach((index) => {
+                group.push(this.contentList[this.ciPuTab][index])
+              })
+              yunGroup[i] = group
+            })
+            this.client.checkYunZi(yun, yunGroup, this.yunBook)
+                .then((data) => {
+                  // 检查韵字对应的状态
+                  data.data.forEach((list, i) => {
+                    this.yunIndexMap.get(yun[i])?.forEach((index, j) => {
+                      if (list[j] == 0 || this.inputStatusList[index] == 0) {
+                        this.inputStatusList[index] = 3
+                      } else if (list[j] == 2 || this.inputStatusList[index] == 2) {
+                        this.inputStatusList[index] = 5
+                      }
+                    })
+                  })
+                })
           })
+    },
+    // 更新韵字索引列表
+    updateYunIndexMap() {
+      this.yunIndexMap = new Map<string, Array<number>>()
+      this.ciPuList[this.ciPuTab].forEach((s, i) => {
+        for (let j = 0; j < s.length; j++) {
+          // 是韵字
+          if ("0123，。、".indexOf(s[j]) === -1) {
+            if (! this.yunIndexMap.has(s[j])) {
+              this.yunIndexMap.set(s[j], new Array<number>())
+            }
+            this.yunIndexMap.get(s[j])?.push(this.getIndex(this.ciPuTab, i, j))
+          }
+        }
+      })
+      console.log(this.yunIndexMap)
     }
   },
   mounted() {
@@ -249,60 +292,83 @@ export default defineComponent({
             this.contentList.push(currentContent)
             // 构造词谱下的输入框引用
             this.inputList.push(new Array<Ref<InputInst>>(currentLength))
-            this.currentIndex = 0
           })
+          this.updateYunIndexMap()
+          this.currentIndex = 0
         })
   }
 })
 </script>
 
 <template>
-  <n-grid cols="12" item-responsive>
-    <n-grid-item span="0 1200:1 1500:2"></n-grid-item>
-    <n-grid-item span="12 1200:10 1500:8">
+  <n-grid :cols="12" item-responsive>
+    <n-grid-item span="12 1200:10 1500:8" offset="0 1200:1 1500:2">
       <n-card>
-        <n-grid :cols="3" :x-gap="10">
-          <n-grid-item :span="1">
+        <n-grid cols="4" x-gap="10" :collapsed-rows="2" item-responsive>
+          <n-grid-item span="4 900:1">
             <h1>作词 - {{ ciPaiName }}</h1>
           </n-grid-item>
-          <n-grid-item :span="2" style="display: flex; justify-content: flex-end; align-items: center">
-            <n-radio-group v-model:value="yunBook" name="radiogroup">
-              <n-space>
-                <n-radio v-for="item in yunBookList" :key="item.value" :value="item.value">
+          <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
+            <n-space align="center">
+            </n-space>
+          </n-grid-item>
+        </n-grid>
+        <n-grid cols="1">
+          <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
+            <n-radio-group v-model:value="yunBook" name="radiogroup" @update:value="(v) => updateStatus()">
+              <n-space align="center">
+                <n-tag type="success">
+                  声韵
+                </n-tag>
+                <n-radio v-for="item in yunBookList" :key="item.value" :value="item.value" size="large">
                   {{ item.label }}
                 </n-radio>
+                <n-switch v-model:value="strictMode" @update:value="(v) => updateStatus()"/>
+                <span>严格模式</span>
               </n-space>
             </n-radio-group>
           </n-grid-item>
         </n-grid>
-        <n-grid :cols="4" :x-gap="20">
-          <n-grid-item :span="3">
+        <n-grid cols="1">
+          <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
+            <n-space align="center">
+              <n-tag type="success">
+                组词
+              </n-tag>
+              <n-switch v-model:value="wordListStatus" />
+              <span>候选提示</span>
+            </n-space>
+          </n-grid-item>
+        </n-grid>
+        <n-grid cols="4" :x-gap="20">
+          <n-grid-item :span="wordListStatus ? 3 : 4">
             <n-tabs v-model:value="ciPuTab" type="line" @update:value="(v) => updatePu(v)" animated>
               <n-tab-pane v-for="(ciPuId, tabIndex) in ciPuTabList"
                           :name="tabIndex"
                           :tab="ciPuMap.get(ciPuId).author"
                           display-directive="show">
                 <p>{{ ciPuMap.get(ciPuId).description }}</p>
-                <div v-for="(s, i) in ciPuList[tabIndex]" :key="i" style="position: fixed">
-                  <span v-for="(c, j) in s" :style="getYunStyle(tabIndex, i, j)">{{ getYun(c) }} </span>
-                </div>
-                <div v-for="(s, i) in ciPuList[tabIndex]" :key="i" style="position: fixed">
-                  <div v-for="(c, j) in s" :key="j" :style="getInputStyle(i, j)" class="content-input">
-                    <n-input v-model:value="contentList[tabIndex][getIndex(tabIndex, i, j)]"
-                             :ref="(el) => addInput(el, tabIndex, getIndex(tabIndex, i, j))"
-                             :autofocus="i + j === 0"
-                             :disabled="'，。、'.indexOf(c) !== -1"
-                             @input="(v) => inputText(v, tabIndex, i, j)"
-                             @focus="updateIndex(tabIndex, i, j)"
-                             @keydown.delete="deleteInput(tabIndex, i, j)"
-                             maxlength="1" type="text" placeholder=""/>
+                <div v-for="(s, i) in ciPuList[tabIndex]" :key="i">
+                  <div style="display: flex">
+                    <span v-for="(c, j) in s" :style="getYunStyle(tabIndex, i, j)">{{ getYun(c) }} </span>
+                  </div>
+                  <div style="display: flex">
+                    <div v-for="(c, j) in s" :key="j" :style="getInputStyle(i, j)" class="content-input">
+                      <n-input v-model:value="contentList[tabIndex][getIndex(tabIndex, i, j)]"
+                               :ref="(el) => addInput(el, tabIndex, getIndex(tabIndex, i, j))"
+                               :autofocus="i + j === 0"
+                               :disabled="'，。、'.indexOf(c) !== -1"
+                               @input="(v) => inputText(v, tabIndex, i, j)"
+                               @focus="updateIndex(tabIndex, i, j)"
+                               @keydown.delete="deleteInput(tabIndex, i, j)"
+                               maxlength="1" type="text" placeholder=""/>
+                    </div>
                   </div>
                 </div>
-                <div :style="getHeight(tabIndex)"></div>
               </n-tab-pane>
             </n-tabs>
           </n-grid-item>
-          <n-grid-item :span="1">
+          <n-grid-item :span="wordListStatus ? 1 : 0">
             <n-tabs value="only" type="line">
               <n-tab-pane name="only" tab="候选词列表" style="text-align: center">
                 <n-list v-if="wordList.length > 0" bordered>
@@ -318,6 +384,9 @@ export default defineComponent({
           </n-grid-item>
         </n-grid>
       </n-card>
+      <div style="text-align: center; padding: 15px;">
+        <span> 助吾填词 2022 · Made by <a href="https://github.com/chienmy/SongCiApp">Chienmy</a> </span>
+      </div>
     </n-grid-item>
   </n-grid>
 </template>
@@ -331,5 +400,6 @@ export default defineComponent({
 .content-input .n-input-wrapper {
   padding-left: 0;
   padding-right: 0;
+  height: 24pt
 }
 </style>
