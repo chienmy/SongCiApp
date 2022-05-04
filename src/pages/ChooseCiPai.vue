@@ -44,7 +44,7 @@ export default defineComponent({
     client: new HttpClient(),
     searchText: String(),
     tabPage: "usual",
-    usualItems: ["江城子", "西江月"],
+    usualItems: ['虞美人', '苏幕遮', '醉花阴', '南乡子', '念奴娇', '天仙子', '钗头凤', '浪淘沙', '渔家傲', '踏莎行', '临江仙', '阮郎归', '菩萨蛮', '浣溪沙', '清平乐', '蝶恋花', '采桑子', '青玉案', '鹧鸪天', '江城子', '卜算子', '点绛唇', '鹊桥仙', '满庭芳', '如梦令', '生查子', '破阵子', '沁园春', '长相思', '忆江南', '玉楼春', '诉衷情', '少年游', '雨霖铃', '洞仙歌', '谒金门', '乌夜啼', '西江月', '渔歌子', '望海潮', '小重山', '画堂春', '定风波', '水龙吟', '永遇乐', '满江红', '南歌子', '声声慢', '贺新郎', '一剪梅', '忆秦娥', '扬州慢', '风入松', '十六字令', '水调歌头', '八声甘州'],
     ciPaiMap: new Map<string, CiPai>(),
     allItems: new Array<[string, string[]]>(),
     currentGroup: new Array<string>(),
@@ -99,6 +99,7 @@ export default defineComponent({
     }
   },
   mounted() {
+    this.usualItems = this.usualItems.sort((a, b) => pinyin.compare(a, b))
     this.client.getCiPaiList()
         .then((data) => {
           for (let item of data.data) {
@@ -121,23 +122,23 @@ export default defineComponent({
 </script>
 
 <template>
-  <n-grid :cols="6">
-    <n-grid-item :span="4" :offset="1">
+  <n-grid :cols="12" item-responsive>
+    <n-grid-item span="12 1200:10 1500:8" offset="0 1200:1 1500:2">
       <n-card>
-        <h1>择一词牌</h1>
-        <n-grid :cols="8" :x-gap="10">
-          <n-grid-item :span="6">
+        <h1>选词</h1>
+        <n-grid :cols="8" :x-gap="10" item-responsive>
+          <n-grid-item span="4 800:6">
             <n-input v-model:value="searchText" type="text" size="large" placeholder="君欲寻何？"/>
           </n-grid-item>
-          <n-grid-item :span="1">
+          <n-grid-item span="2 800:1">
             <n-button size="large" block @click="search">寻之</n-button>
           </n-grid-item>
-          <n-grid-item :span="1">
+          <n-grid-item span="2 800:1">
             <n-button size="large" block :disabled="!allowNext" @click="nextStep">以此作词</n-button>
           </n-grid-item>
         </n-grid>
-        <n-grid :cols="2" :x-gap="10" style="margin-top: 10px">
-          <n-grid-item :span="1">
+        <n-grid :cols="2" :x-gap="10" style="margin-top: 10px" :collapsed-rows="2" item-responsive>
+          <n-grid-item span="2 800:1">
             <n-tabs :value="tabPage" type="line" @update:value="(v) => tabPage = v" animated>
               <n-tab-pane name="usual" tab="常用">
                 <n-space>
@@ -168,15 +169,18 @@ export default defineComponent({
               </n-tab-pane>
             </n-tabs>
           </n-grid-item>
-          <n-grid-item :span="1">
-            <n-card>
-              <h3 style="margin-block: 10px">{{ cardTitle }}</h3>
-              <n-divider style="margin: 10px 0"/>
-              {{ cardContent }}
-            </n-card>
+          <n-grid-item span="2 800:1">
+            <n-tabs value="only" type="line" justify-content="center">
+              <n-tab-pane name="only" :tab="cardTitle">
+                {{ cardContent }}
+              </n-tab-pane>
+            </n-tabs>
           </n-grid-item>
         </n-grid>
       </n-card>
+      <div style="text-align: center; padding: 15px;">
+        <span> 助吾填词 2022 · Made by <a href="https://github.com/chienmy/SongCiApp">Chienmy</a> </span>
+      </div>
     </n-grid-item>
   </n-grid>
 </template>
