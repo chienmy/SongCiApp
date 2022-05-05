@@ -6,7 +6,7 @@ export default class HttpClient {
 
   public constructor() {
     this.instance = axios.create({
-      baseURL: "http://127.0.0.1:8080/",
+      baseURL: "http://159.75.213.132:8080/",
       timeout: 5000
     })
   }

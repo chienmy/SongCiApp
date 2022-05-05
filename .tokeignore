@@ -1,0 +1,6 @@
+docs/
+dist/
+src/assets/
+public/
+README.md
+*.json

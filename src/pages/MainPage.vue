@@ -1,5 +1,5 @@
 <script lang="ts">
-import {defineComponent, unref, Ref} from 'vue'
+import {defineComponent, unref, Ref, StyleValue} from 'vue'
 import { NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from 'naive-ui'
 import { InputInst } from 'naive-ui'
 import HttpClient from "../components/client";
@@ -8,8 +8,6 @@ import { CiPu, Word } from "../components/model"
 export default defineComponent({
   components: {
     NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTag, NTabPane, NSpace, NRadioGroup, NRadio, NSwitch
-  },
-  computed: {
   },
   data: () => ({
     client: new HttpClient(),
@@ -56,11 +54,6 @@ export default defineComponent({
     }]
   }),
   methods: {
-    getHeight(tabIndex: number) {
-      return {
-        height: (2 * this.ciPuList[tabIndex].length * this.cellHeight) + 'pt'
-      }
-    },
     getYun(c: string) {
       if (c == "0") {
         return "◯"
@@ -84,7 +77,7 @@ export default defineComponent({
       }
       return c
     },
-    getYunStyle(tabIndex: number, row: number, column: number) {
+    getYunStyle(tabIndex: number, row: number, column: number): StyleValue {
       // 设置颜色
       let code = this.inputStatusList[this.getIndex(tabIndex, row, column)]
       let colorArray = ["black", "#c21f30", "#1a6840", "#d9a40e", "#c21f3033", "", "#d9a40e33"]
@@ -98,7 +91,7 @@ export default defineComponent({
         backgroundColor: code >= 2 ? colorArray[code + 1] : "none",
       }
     },
-    getInputStyle(row: number, column: number) {
+    getInputStyle(): StyleValue {
       return {
         width: (this.cellWidth - this.cellMargin * 2) + 'pt',
         margin: this.cellMargin + 'pt',
@@ -353,7 +346,7 @@ export default defineComponent({
                     <span v-for="(c, j) in s" :style="getYunStyle(tabIndex, i, j)">{{ getYun(c) }} </span>
                   </div>
                   <div style="display: flex">
-                    <div v-for="(c, j) in s" :key="j" :style="getInputStyle(i, j)" class="content-input">
+                    <div v-for="(c, j) in s" :key="j" :style="getInputStyle()" class="content-input">
                       <n-input v-model:value="contentList[tabIndex][getIndex(tabIndex, i, j)]"
                                :ref="(el) => addInput(el, tabIndex, getIndex(tabIndex, i, j))"
                                :autofocus="i + j === 0"

@@ -2,7 +2,7 @@ import { createApp, defineComponent, h } from 'vue'
 import ChooseCiPai from './pages/ChooseCiPai.vue'
 import MainPage from './pages/MainPage.vue'
 
-const routes = new Map([
+const routes = new Map<string, any>([
   ['/', ChooseCiPai],
   ['/main', MainPage]
 ])

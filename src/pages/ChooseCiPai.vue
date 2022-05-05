@@ -66,7 +66,7 @@ export default defineComponent({
     },
     search() {
       if (this.searchText.length > 0) {
-        this.searchResult = Array.from(this.ciPaiMap.keys()).filter((s) => (s.indexOf(this.searchText) != -1))
+        this.searchResult = Array.from(this.ciPaiMap.keys()).filter((s: string) => (s.indexOf(this.searchText) != -1))
         this.tabPage = "all"
       }
     },
