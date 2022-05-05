@@ -11,7 +11,8 @@ export default defineConfig(({ command, mode }) => {
     return {
       plugins: [vue()],
       build: {
-        outDir: "docs"
+        outDir: "docs",
+        assetsDir: "static"
       }
     }
   }
