@@ -1,9 +1,9 @@
 import { createApp, defineComponent, h } from 'vue'
-import ChooseCiPai from './pages/ChooseCiPai.vue'
+import ChoosePage from './pages/ChoosePage.vue'
 import MainPage from './pages/MainPage.vue'
 
 const routes = new Map<string, any>([
-  ['/', ChooseCiPai],
+  ['/', ChoosePage],
   ['/main', MainPage]
 ])
 
@@ -14,7 +14,7 @@ const App = defineComponent({
 
   computed: {
     ViewComponent () {
-      return routes.get(this.currentRoute) || ChooseCiPai
+      return routes.get(this.currentRoute) || ChoosePage
     }
   },
 
