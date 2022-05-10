@@ -5,17 +5,10 @@
       <n-input v-model:value="zi"
                ref="inputRef"
                :disabled="! allowInput"
-               @input="(v) => updateText(v)"
+               @input="updateText"
                @focus="focusEvent"
                @keydown.delete="deleteEvent"
                maxlength="1" type="text" placeholder=""/>
-<!--               :ref="(el) => addInput(el, tabIndex, getIndex(tabIndex, i, j))"-->
-<!--               :autofocus="i + j === 0"-->
-<!--               :disabled="'，。、'.indexOf(c) !== -1"-->
-<!--               @input="(v) => inputText(v, tabIndex, i, j)"-->
-<!--               @focus="updateIndex(tabIndex, i, j)"-->
-<!--               @keydown.delete="deleteInput(tabIndex, i, j)"-->
-
     </div>
   </div>
 </template>
