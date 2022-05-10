@@ -122,7 +122,7 @@ const nextStep = () => {
   sessionStorage.setItem("ci-pai", searchText.value)
   sessionStorage.setItem("ci-pai-id", String(ciPaiMap.get(searchText.value)?.id || -1))
   searchText.value = ""
-  window.location.href = "/main"
+  window.location.href = import.meta.env.BASE_URL + "main"
 }
 // 当前首字母与切换
 const currentTag = ref("a")
