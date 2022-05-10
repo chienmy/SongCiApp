@@ -15,7 +15,7 @@ const App = defineComponent({
 
   computed: {
     ViewComponent () {
-      return routes.get(this.currentRoute) || NotFoundPage
+      return routes.get(this.currentRoute.substring(import.meta.env.BASE_URL.length - 1)) || NotFoundPage
     }
   },
 

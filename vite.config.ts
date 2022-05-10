@@ -10,7 +10,7 @@ export default defineConfig(({ command, mode }) => {
   } else {
     return {
       plugins: [vue()],
-      base: "SongCiApp/",
+      base: "/SongCiApp/",
       build: {
         outDir: "docs",
         assetsDir: "static"
