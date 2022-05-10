@@ -1,8 +1,9 @@
-import { createApp, defineComponent, h } from 'vue'
+import {Component, createApp, defineComponent, h} from 'vue'
 import ChoosePage from './pages/ChoosePage.vue'
 import MainPage from './pages/MainPage.vue'
+import NotFoundPage from './pages/NotFoundPage.vue'
 
-const routes = new Map<string, any>([
+const routes = new Map<string, Component>([
   ['/', ChoosePage],
   ['/main', MainPage]
 ])
@@ -14,7 +15,7 @@ const App = defineComponent({
 
   computed: {
     ViewComponent () {
-      return routes.get(this.currentRoute) || ChoosePage
+      return routes.get(this.currentRoute) || NotFoundPage
     }
   },
 

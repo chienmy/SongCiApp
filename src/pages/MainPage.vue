@@ -1,298 +1,3 @@
-<script lang="ts">
-import {defineComponent, unref, Ref, StyleValue} from 'vue'
-import { NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from 'naive-ui'
-import { InputInst } from 'naive-ui'
-import HttpClient from "../components/client";
-import { CiPu, Word } from "../components/model"
-
-export default defineComponent({
-  components: {
-    NButton, NCard, NDivider, NInput, NGrid, NGridItem, NList, NListItem, NTabs, NTag, NTabPane, NSpace, NRadioGroup, NRadio, NSwitch
-  },
-  data: () => ({
-    client: new HttpClient(),
-    ciPaiName: String(),
-    // 词谱数据
-    ciPuMap: new Map<number, CiPu>(),
-    // 词谱列表，map中按序排列
-    ciPuTabList: new Array<number>(),
-    // 当前词谱ID
-    ciPuTab: 0,
-    // 所有内容
-    contentList: new Array<Array<string>>(),
-    // 输入框控制
-    inputList: new Array<Array<Ref<InputInst>>>(),
-    // 声韵状态检查：-1 未知/空白；0 不符；1 符合；2 不确定；3 韵不符；5 韵不确定
-    inputStatusList: new Array<number>(),
-    // 各标签页词谱，分行列表格式
-    ciPuList: new Array<Array<string>>(),
-    // 光标当前位置在词谱中的索引
-    currentIndex: 0,
-    //
-    yunBook: "psy",
-    strictMode: false,
-    yunIndexMap: new Map<string, Array<number>>(),
-    // 候选词列表状态
-    wordListStatus: true,
-    // 候选词列表
-    wordList: new Array<Word>(),
-    cellHeight: 28,
-    cellWidth: 28,
-    cellMargin: 2,
-    yunBookList: [{
-      value: "psy",
-      label: "平水韵"
-    }, {
-      value: "clzy",
-      label: "词林正韵"
-    }, {
-      value: "zhxy",
-      label: "中华新韵"
-    }, {
-      value: "zhty",
-      label: "中华通韵"
-    }]
-  }),
-  methods: {
-    getYun(c: string) {
-      if (c == "0") {
-        return "◯"
-      } else if (c == "1") {
-        return "●"
-      } else if (c == "2") {
-        return "◎"
-      } else if (c == "3") {
-        return "◉"
-      } else {
-        let pingYun = "①②③④⑤⑥⑦⑧⑨⑩"
-        let zeYun = "❶❷❸❹❺❻❼❽❾❿"
-        let index = c.charCodeAt(0) - "a".charCodeAt(0)
-        if ((index >= 0) && (index < 26)) {
-          return pingYun.charAt(index)
-        }
-        index = c.charCodeAt(0) - "A".charCodeAt(0)
-        if ((index >= 0) && (index < 26)) {
-          return zeYun.charAt(index)
-        }
-      }
-      return c
-    },
-    getYunStyle(tabIndex: number, row: number, column: number): StyleValue {
-      // 设置颜色
-      let code = this.inputStatusList[this.getIndex(tabIndex, row, column)]
-      let colorArray = ["black", "#c21f30", "#1a6840", "#d9a40e", "#c21f3033", "", "#d9a40e33"]
-      return {
-        width: this.cellWidth + 'pt',
-        textAlign: 'center',
-        fontFamily: "CiPuSymbol",
-        fontSize: '16pt',
-        color: colorArray[code >= 2 ? code - 2: code + 1],
-        paddingTop: '3pt',
-        backgroundColor: code >= 2 ? colorArray[code + 1] : "none",
-      }
-    },
-    getInputStyle(): StyleValue {
-      return {
-        width: (this.cellWidth - this.cellMargin * 2) + 'pt',
-        margin: this.cellMargin + 'pt',
-        textAlign: 'center',
-      }
-    },
-    // 获取行列单元格在词谱中的位置索引
-    getIndex(tabIndex: number, row: number, column: number) {
-      if (tabIndex >= this.ciPuTabList.length) {
-        console.log("error")
-        return 0
-      }
-      let index = 0
-      for (let i = 0; i < row; i++) {
-        index += this.ciPuList[tabIndex][i].length
-      }
-      return index + column
-    },
-    // 输入文本时操作
-    inputText(text: string, tabIndex: number, row: number, column: number) {
-      if (text.length > 0) {
-        // 只取首字
-        text = text[0]
-        if (this.currentIndex < this.contentList[tabIndex].length - 1) {
-          if ((this.contentList[tabIndex][this.getIndex(tabIndex, row, column) + 1].length == 0) ||
-              ("，。、".indexOf(this.contentList[tabIndex][this.getIndex(tabIndex, row, column) + 1]) == -1)) {
-            // 更新候选词列表
-            this.updateWordList(text, row, column)
-            unref(this.inputList[tabIndex][this.currentIndex + 1]).focus()
-          } else {
-            unref(this.inputList[tabIndex][this.currentIndex + 2]).focus()
-          }
-        }
-      } else {
-        // 非首字则回到前一个输入处
-        if (this.getIndex(tabIndex, row, column) > 0) {
-          this.updateWordList(this.contentList[tabIndex][this.getIndex(tabIndex, row, column) - 1], row, column)
-        }
-      }
-      this.updateStatus()
-    },
-    addInput (el: Ref, tabIndex: number, index: number) {
-      this.inputList[tabIndex][index] = el
-    },
-    deleteInput(tabIndex: number, row: number, column: number) {
-      let index = this.getIndex(tabIndex, row, column)
-      if (index > 0 && this.contentList[tabIndex][index].length == 0) {
-        let preText = this.contentList[tabIndex][index - 1]
-        if (preText.length != 0) {
-          // 前一个不是标点
-          if ("，。、".indexOf(preText) == -1) {
-            unref(this.inputList[tabIndex][index - 1]).focus()
-          } else {
-            unref(this.inputList[tabIndex][index - 2]).focus()
-          }
-        } else {
-          unref(this.inputList[tabIndex][index - 1]).focus()
-        }
-      }
-      this.updateStatus()
-    },
-    updateIndex(tabIndex: number, row: number, column: number) {
-      this.currentIndex = this.getIndex(tabIndex, row, column)
-      if (this.currentIndex > 0) {
-        this.updateWordList(this.contentList[tabIndex][this.currentIndex - 1], row, column)
-      }
-    },
-    // 切换标签页时更新操作
-    updatePu(ciPuId: number) {
-      this.ciPuTab = ciPuId
-      // 更新候选词列表为空
-      this.wordList = new Array<Word>()
-      this.currentIndex = 0
-      this.updateYunIndexMap()
-      this.updateStatus()
-    },
-    // 更新候选词列表
-    updateWordList(text: string, row: number, column: number) {
-      if (text.length == 0 || "，。、".indexOf(text) != -1) {
-        this.wordList = new Array<Word>()
-        return
-      }
-      if (column < this.ciPuList[this.ciPuTab][row].length - 1) {
-        this.client.getWordList(text, this.yunBook, this.ciPuList[this.ciPuTab][row][column + 1])
-            .then((data) => {
-              this.wordList = data.data.sort((a, b) => (a.count > b.count ? -1 : 1))
-              this.wordList = this.wordList.filter((v) => v.count >= 3).slice(0, 20)
-            })
-      }
-    },
-    // 更新检查状态
-    updateStatus() {
-      let pu = this.ciPuList[this.ciPuTab].join("")
-      let content = this.contentList[this.ciPuTab].map((s) => s.length == 0 ? " " : s).join("")
-      this.client.checkYun(pu, content, this.yunBook, this.strictMode)
-          .then((data) => {
-            this.inputStatusList = new Array<number>()
-            for (let code of data.data) {
-              this.inputStatusList.push(code)
-            }
-            // 检查韵字
-            let yun = Array.from(this.yunIndexMap.keys())
-            let yunGroup = new Array<Array<string>>(yun.length)
-            yun.forEach((y, i) => {
-              let group = new Array<string>()
-              this.yunIndexMap.get(y)?.forEach((index) => {
-                group.push(this.contentList[this.ciPuTab][index])
-              })
-              yunGroup[i] = group
-            })
-            this.client.checkYunZi(yun, yunGroup, this.yunBook)
-                .then((data) => {
-                  // 检查韵字对应的状态
-                  data.data.forEach((list, i) => {
-                    this.yunIndexMap.get(yun[i])?.forEach((index, j) => {
-                      if (list[j] == 0 || this.inputStatusList[index] == 0) {
-                        this.inputStatusList[index] = 3
-                      } else if (list[j] == 2 || this.inputStatusList[index] == 2) {
-                        this.inputStatusList[index] = 5
-                      }
-                    })
-                  })
-                })
-          })
-    },
-    // 更新韵字索引列表
-    updateYunIndexMap() {
-      this.yunIndexMap = new Map<string, Array<number>>()
-      this.ciPuList[this.ciPuTab].forEach((s, i) => {
-        for (let j = 0; j < s.length; j++) {
-          // 是韵字
-          if ("0123，。、".indexOf(s[j]) === -1) {
-            if (! this.yunIndexMap.has(s[j])) {
-              this.yunIndexMap.set(s[j], new Array<number>())
-            }
-            this.yunIndexMap.get(s[j])?.push(this.getIndex(this.ciPuTab, i, j))
-          }
-        }
-      })
-      console.log(this.yunIndexMap)
-    }
-  },
-  mounted() {
-    this.ciPaiName = sessionStorage["ci-pai"]
-    this.client.getCiPuList(parseInt(sessionStorage["ci-pai-id"]))
-        .then((data) => {
-          data.data.forEach((item) => this.ciPuMap.set(item.id, item))
-          // 对词谱排序，把标为主要的排在第一个
-          this.ciPuTabList = Array.from(this.ciPuMap.keys())
-          this.ciPuTabList = this.ciPuTabList.sort((a, b) => (this.ciPuMap.get(a)?.main_flag === 1 ? -1 : 1))
-          this.ciPuTabList.forEach((id) => {
-            // 构造每个页面的词谱文本
-            let currentPu = new Array<string>()
-            let currentLength = 0;
-            for (let s of (this.ciPuMap.get(id)?.content || "").split("|")) {
-              currentLength += s.length
-              if (s.length > 18) {
-                // 找到离中心最近的句号
-                let index = Math.floor(s.length / 2)
-                for (let i = 0; i < s.length; i++) {
-                  if (s[index - i] === "。") {
-                    index = index - i
-                    break
-                  }
-                  if (s[index + i] === "。") {
-                    index = index + i
-                    break
-                  }
-                }
-                currentPu.push(s.substring(0, index + 1))
-                currentPu.push(s.substring(index + 1))
-              } else {
-                currentPu.push(s)
-              }
-            }
-            this.ciPuList.push(currentPu)
-            // 构造词谱下的输入框内容
-            let currentContent = new Array<string>(currentLength)
-            // 填充标点
-            let index = 0
-            for (let i = 0; i < currentPu.length; i++) {
-              for (let j = 0; j < currentPu[i].length; j++) {
-                if ("，。、".indexOf(currentPu[i][j]) != -1) {
-                  currentContent[index] = currentPu[i][j]
-                } else {
-                  currentContent[index] = ""
-                }
-                index ++
-              }
-            }
-            this.contentList.push(currentContent)
-            // 构造词谱下的输入框引用
-            this.inputList.push(new Array<Ref<InputInst>>(currentLength))
-          })
-          this.updateYunIndexMap()
-          this.currentIndex = 0
-        })
-  }
-})
-</script>
-
 <template>
   <n-grid :cols="12" item-responsive>
     <n-grid-item span="12 1200:10 1500:8" offset="0 1200:1 1500:2">
@@ -301,14 +6,10 @@ export default defineComponent({
           <n-grid-item span="4 900:1">
             <h1>作词 - {{ ciPaiName }}</h1>
           </n-grid-item>
-          <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
-            <n-space align="center">
-            </n-space>
-          </n-grid-item>
         </n-grid>
         <n-grid cols="1">
           <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
-            <n-radio-group v-model:value="yunBook" name="radiogroup" @update:value="(v) => updateStatus()">
+            <n-radio-group v-model:value="yunBook" name="radioGroup">
               <n-space align="center">
                 <n-tag type="success">
                   声韵
@@ -316,7 +17,7 @@ export default defineComponent({
                 <n-radio v-for="item in yunBookList" :key="item.value" :value="item.value" size="large">
                   {{ item.label }}
                 </n-radio>
-                <n-switch v-model:value="strictMode" @update:value="(v) => updateStatus()"/>
+                <n-switch v-model:value="strictMode"/>
                 <span>严格模式</span>
               </n-space>
             </n-radio-group>
@@ -335,35 +36,24 @@ export default defineComponent({
         </n-grid>
         <n-grid cols="4" :x-gap="20">
           <n-grid-item :span="wordListStatus ? 3 : 4">
-            <n-tabs v-model:value="ciPuTab" type="line" @update:value="(v) => updatePu(v)" animated>
-              <n-tab-pane v-for="(ciPuId, tabIndex) in ciPuTabList"
-                          :name="tabIndex"
+            <n-tabs v-model:value="ciPuTab" type="line" @update:value="updateTab" animated>
+              <n-tab-pane v-for="(ciPuId, i) in ciPuIdList"
+                          :name="ciPuId"
                           :tab="ciPuMap.get(ciPuId).author"
-                          display-directive="show">
+                          display-directive="show:lazy">
                 <p>{{ ciPuMap.get(ciPuId).description }}</p>
-                <div v-for="(s, i) in ciPuList[tabIndex]" :key="i">
-                  <div style="display: flex">
-                    <span v-for="(c, j) in s" :style="getYunStyle(tabIndex, i, j)">{{ getYun(c) }} </span>
-                  </div>
-                  <div style="display: flex">
-                    <div v-for="(c, j) in s" :key="j" :style="getInputStyle()" class="content-input">
-                      <n-input v-model:value="contentList[tabIndex][getIndex(tabIndex, i, j)]"
-                               :ref="(el) => addInput(el, tabIndex, getIndex(tabIndex, i, j))"
-                               :autofocus="i + j === 0"
-                               :disabled="'，。、'.indexOf(c) !== -1"
-                               @input="(v) => inputText(v, tabIndex, i, j)"
-                               @focus="updateIndex(tabIndex, i, j)"
-                               @keydown.delete="deleteInput(tabIndex, i, j)"
-                               maxlength="1" type="text" placeholder=""/>
-                    </div>
-                  </div>
-                </div>
+                <ci-input :pu="ciPuMap.get(ciPuId).content"
+                          :book="yunBook"
+                          :strict-mode="strictMode"
+                          :content="contentMap.get(ciPuId) || ''"
+                          @update-words="updateWordList"
+                          @update:content="updateHandle"/>
               </n-tab-pane>
             </n-tabs>
           </n-grid-item>
           <n-grid-item :span="wordListStatus ? 1 : 0">
-            <n-tabs value="only" type="line">
-              <n-tab-pane name="only" tab="候选词列表" style="text-align: center">
+            <n-tabs value="word" type="line">
+              <n-tab-pane name="word" tab="候选词" style="text-align: center">
                 <n-list v-if="wordList.length > 0" bordered>
                   <n-list-item v-for="item in wordList" style="padding: 6px 10px">
                     <span>{{ item.word[0] }}</span>
@@ -373,26 +63,109 @@ export default defineComponent({
                 </n-list>
                 <span v-if="wordList.length === 0">暂无</span>
               </n-tab-pane>
+              <!--              <n-tab-pane name="nextZi" tab="下一字" style="text-align: center">-->
+              <!--              </n-tab-pane>-->
             </n-tabs>
           </n-grid-item>
         </n-grid>
       </n-card>
-      <div style="text-align: center; padding: 15px;">
-        <span> 助吾填词 2022 · Made by <a href="https://github.com/chienmy/SongCiApp">Chienmy</a> </span>
-      </div>
     </n-grid-item>
   </n-grid>
 </template>
 
-<style>
-@font-face {
-  font-family: "CiPuSymbol";
-  src: url("../assets/CiPuSymbol.ttf");
+<script setup lang="ts">
+import { NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from 'naive-ui'
+import CiInput from '../components/CiInput.vue'
+import { onMounted, ref, reactive } from "vue"
+import { CiPu, CiZu, Word } from "../components/model"
+import allCiPu from "../data/ciPu"
+import allCiZu from "../data/ciZu"
+import {getPingZe, unzipCiZu} from "../data/utils";
+
+const ciPaiName = ref("")
+onMounted(() => {
+  ciPaiName.value = sessionStorage["ci-pai"] || ""
+})
+// 格律部分
+const yunBook = ref("clzy")
+const yunBookList = [{
+  value: "clzy",
+  label: "词林正韵"
+}, {
+  value: "psy",
+  label: "平水韵"
+}, {
+  value: "zhxy",
+  label: "中华新韵"
+}, {
+  value: "zhty",
+  label: "中华通韵"
+}]
+const strictMode = ref(false)
+// 组词部分
+const wordListStatus = ref(true)
+// 词谱数据
+const ciPuMap = reactive(new Map<number, CiPu>())
+const ciPuIdList = reactive(new Array<number>())
+onMounted(() => {
+  allCiPu.get(parseInt(sessionStorage["ci-pai-id"]))?.forEach((v) => {
+    ciPuMap.set(v.id, v)
+  })
+  // 对词谱排序，把标为主要的排在第一个
+  Array.from(ciPuMap.values()).sort((a, b) => (a.main_flag === 1 ? -1 : 1)).forEach((item) => {
+    ciPuIdList.push(item.id)
+  })
+})
+// 标签页
+const ciPuTab = ref(0)
+onMounted(() => {
+  ciPuTab.value = ciPuIdList[0]
+})
+const updateTab = (newTab: number) => {
+  ciPuTab.value = newTab
+}
+// 所填内容
+const contentMap = reactive(new Map<number, string>())
+onMounted(() => {
+  ciPuIdList.forEach((v) => {
+    contentMap.set(v, "")
+  })
+})
+//
+const updateHandle = (content: string) => {
+  // console.log(content)
+}
+// 候选词列表
+const wordList = reactive(new Array<Word>())
+const nextZiList = reactive(new Array<Word>())
+const updateWordList = (searchChar: string, searchPu: string) => {
+  wordList.length = 0
+  let ciZuList = new Array<CiZu>()
+  allCiZu.get(searchChar)?.forEach((s) => {
+    ciZuList.push(unzipCiZu(s))
+  })
+  ciZuList = ciZuList.sort((a, b) => (a.count > b.count ? -1 : 1))
+  for (let c of ciZuList) {
+    let truth = getPingZe(c.word[1], yunBook.value)
+    if (! (searchPu == "2" || searchPu == "3")) {
+      let target = (searchPu == "0" || /[a-z]/.test(searchPu)) ? 0 : 1
+      if (! (truth == 2 || target == truth)) {
+        continue
+      }
+    }
+    wordList.push({
+      id: c.id,
+      word: c.word,
+      count: c.count,
+      needCheck: (truth == -1 || truth == 2)
+    })
+  }
+  // 长度裁剪
+  if (wordList.length > 16) wordList.length = 16
 }
 
-.content-input .n-input-wrapper {
-  padding-left: 0;
-  padding-right: 0;
-  height: 24pt
-}
+</script>
+
+<style scoped>
+
 </style>
