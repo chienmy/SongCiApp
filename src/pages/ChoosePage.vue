@@ -26,7 +26,7 @@
                 <n-grid v-if="searchResult.length === 0" :cols="9" :x-gap="0">
                   <n-grid-item :span="1">
                     <n-anchor ignore-gap>
-                      <div v-for="i in 26" :key="i" >
+                      <div v-for="i in 26" :key="i">
                         <n-anchor-link v-if="allTagGroup.has(String.fromCharCode((97 + i)))"
                                        :title="String.fromCharCode((65 + i))"
                                        href="#" @click="updateTag(String.fromCharCode((97 + i)))"/>
@@ -70,35 +70,15 @@ import {
   NTabs,
   NTabPane,
   NSpace
-} from 'naive-ui'
-import { ref, reactive, onMounted, computed } from "vue"
-import pinyin from 'pinyin'
-import { CiPai } from "../components/model"
+} from "naive-ui"
+import {ref, reactive, computed} from "vue"
 import CiPaiTag from "../components/CiPaiTag.vue"
-import { allCiPai, mostUseCiPai } from "../data/ciPai"
+import {ciPaiService} from "../data/CiPaiService"
 
 // 常用词牌列表
-const mostUseCiPaiList = mostUseCiPai.sort((a, b) => pinyin.compare(a, b))
-const ciPaiMap = reactive(new Map<string, CiPai>())
+const mostUseCiPaiList = ciPaiService.mostUseCiPai
 // 全词牌首字母分类展示
-const allTagGroup = new Map<string, string[]>()
-onMounted(() => {
-  for (let ciPai of allCiPai) {
-    ciPaiMap.set(ciPai.name, ciPai)
-    let pinyinName = pinyin(ciPai.name, {
-      heteronym: true,
-      style: pinyin.STYLE_NORMAL
-    })
-    let firstChar = pinyinName[0][0][0]
-    if (! allTagGroup.has(firstChar)) {
-      allTagGroup.set(firstChar, [])
-    }
-    allTagGroup.get(firstChar)?.push(ciPai.name)
-  }
-  for (let [key, list] of allTagGroup) {
-    allTagGroup.set(key, list.sort((a, b) => pinyin.compare(a, b)))
-  }
-})
+const allTagGroup = ciPaiService.groupByPinYin()
 // 标签页与标签页切换
 const tabValue = ref("usual")
 const updateTab = (v: string) => {
@@ -111,16 +91,16 @@ const searchResult = reactive(new Array<string>())
 const search = () => {
   if (searchText.value.length > 0) {
     searchResult.length = 0
-    searchResult.push(...Array.from<string>(ciPaiMap.keys()).filter((s: string) => (s.indexOf(searchText.value) != -1)))
+    searchResult.push(...ciPaiService.search(searchText.value))
     tabValue.value = "all"
   }
 }
 // 是否允许跳转到填词页面
-const allowNext = computed(() => ciPaiMap.has(searchText.value))
+const allowNext = computed(() => ciPaiService.has(searchText.value))
 // 跳转
 const nextStep = () => {
   sessionStorage.setItem("ci-pai", searchText.value)
-  sessionStorage.setItem("ci-pai-id", String(ciPaiMap.get(searchText.value)?.id || -1))
+  sessionStorage.setItem("ci-pai-id", String(ciPaiService.get(searchText.value).id))
   searchText.value = ""
   window.location.href = import.meta.env.BASE_URL + "main"
 }
@@ -135,7 +115,7 @@ const cardContent = ref("暂略")
 const clickTag = (tagName: string) => {
   searchText.value = tagName
   cardTitle.value = tagName
-  cardContent.value = ciPaiMap.get(tagName)?.description || "暂略"
+  cardContent.value = ciPaiService.get(tagName)?.description || "暂略"
 }
 </script>
 
