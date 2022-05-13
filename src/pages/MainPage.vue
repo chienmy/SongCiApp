@@ -74,31 +74,29 @@
 </template>
 
 <script setup lang="ts">
-import { NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from 'naive-ui'
-import CiInput from '../components/CiInput.vue'
+import { NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from "naive-ui"
+import CiInput from "../components/CiInput.vue"
 import { onMounted, ref, reactive } from "vue"
-import { CiPu, CiZu, Word } from "../components/model"
-import allCiPu from "../data/ciPu"
-import allCiZu from "../data/ciZu"
-import {getPingZe, unzipCiZu} from "../data/utils";
+import { CiPu, ciPuService } from "../data/CiPuService"
+import { Word, ciZuService } from "../data/CiZuService"
 
 const ciPaiName = ref("")
 onMounted(() => {
   ciPaiName.value = sessionStorage["ci-pai"] || ""
 })
 // 格律部分
-const yunBook = ref("clzy")
+const yunBook = ref(1)
 const yunBookList = [{
-  value: "clzy",
+  value: 1,
   label: "词林正韵"
 }, {
-  value: "psy",
+  value: 0,
   label: "平水韵"
 }, {
-  value: "zhxy",
+  value: 2,
   label: "中华新韵"
 }, {
-  value: "zhty",
+  value: 3,
   label: "中华通韵"
 }]
 const strictMode = ref(false)
@@ -108,12 +106,9 @@ const wordListStatus = ref(true)
 const ciPuMap = reactive(new Map<number, CiPu>())
 const ciPuIdList = reactive(new Array<number>())
 onMounted(() => {
-  allCiPu.get(parseInt(sessionStorage["ci-pai-id"]))?.forEach((v) => {
+  ciPuService.get(parseInt(sessionStorage["ci-pai-id"])).forEach((v) => {
     ciPuMap.set(v.id, v)
-  })
-  // 对词谱排序，把标为主要的排在第一个
-  Array.from(ciPuMap.values()).sort((a, b) => (a.main_flag === 1 ? -1 : 1)).forEach((item) => {
-    ciPuIdList.push(item.id)
+    ciPuIdList.push(v.id)
   })
 })
 // 标签页
@@ -140,28 +135,9 @@ const wordList = reactive(new Array<Word>())
 const nextZiList = reactive(new Array<Word>())
 const updateWordList = (searchChar: string, searchPu: string) => {
   wordList.length = 0
-  let ciZuList = new Array<CiZu>()
-  allCiZu.get(searchChar)?.forEach((s) => {
-    ciZuList.push(unzipCiZu(s))
-  })
-  ciZuList = ciZuList.sort((a, b) => (a.count > b.count ? -1 : 1))
-  for (let c of ciZuList) {
-    let truth = getPingZe(c.word[1], yunBook.value)
-    if (! (searchPu == "2" || searchPu == "3")) {
-      let target = (searchPu == "0" || /[a-z]/.test(searchPu)) ? 0 : 1
-      if (! (truth == 2 || target == truth)) {
-        continue
-      }
-    }
-    wordList.push({
-      id: c.id,
-      word: c.word,
-      count: c.count,
-      needCheck: (truth == -1 || truth == 2)
-    })
+  if (searchChar.length > 0) {
+    ciZuService.getWordList(searchChar, searchPu, yunBook.value).forEach((w) => wordList.push(w))
   }
-  // 长度裁剪
-  if (wordList.length > 16) wordList.length = 16
 }
 
 </script>

@@ -12,16 +12,14 @@
 </template>
 
 <script setup lang="ts">
-import ZiInput from '../components/ZiInput.vue'
-import {onMounted, ref, reactive, computed, watch, onBeforeUpdate, unref, watchPostEffect} from "vue"
-import allZiYun from "../data/ziYun"
-import {getPingZe, unzipZiYun} from "../data/utils"
-import {Yun} from "./model";
+import ZiInput from "../components/ZiInput.vue"
+import { onMounted, reactive, watch, onBeforeUpdate } from "vue"
+import { yunService } from "../data/YunService"
 
 const props = defineProps<{
-  pu: string,
-  content: string,
-  book: string
+  pu: string
+  content: string
+  book: number
   strictMode: boolean
 }>()
 
@@ -111,6 +109,8 @@ const preZi = (index: number) => {
 const onWordSearch = (index: number) => {
   if (index > 0 && inputRefList[index - 1].allowInput) {
     emit("updateWords", ziList[index - 1], inputRefList[index].pu)
+  } else {
+    emit("updateWords", "", "")
   }
 }
 // 韵部索引
@@ -130,37 +130,7 @@ onMounted(() => {
 const updateYunStatus = () => {
   let statusMap = new Map<string, Array<number>>()
   yunIndexMap.forEach((v, k) => {
-    let result = new Array<number>(v.length)
-    let possibleYun = new Array<Set<string>>()
-    v.forEach((index) => {
-      let innerSet = new Set<string>()
-      if (ziList[index].length != 0) {
-        allZiYun.get(props.book + ziList[index]).forEach((yun) => {
-          innerSet.add(unzipZiYun(yun).part)
-        })
-        possibleYun.push(innerSet)
-      }
-    })
-    if (possibleYun.length == 1) {
-      v.forEach((index, i) => {
-        result[i] = (ziList[index].length != 0 ? 1 : -1)
-      })
-    } else if (possibleYun.length > 1) {
-      let joinSet = new Set<string>([...possibleYun[0]])
-      for (let i = 1; i < possibleYun.length; i++) {
-        joinSet = new Set<string>([...joinSet].filter((item) => possibleYun[i].has(item)))
-      }
-      if (joinSet.size == 0) {
-        v.forEach((index, i) => {
-          result[i] = (ziList[index].length != 0 ? 0 : -1)
-        })
-      } else {
-        v.forEach((index, i) => {
-          result[i] = (ziList[index].length != 0 ? (allZiYun.get(props.book + ziList[index]).length == 1 ? 1 : 2) : -1)
-        })
-      }
-    }
-    statusMap.set(k, result)
+    statusMap.set(k, yunService.checkYun(props.book, k, v.map((index) => (ziList[index]))))
   })
   return statusMap
 }
@@ -168,25 +138,7 @@ const updateYunStatus = () => {
 const updateStatusList = () => {
   inputRefList.forEach((r) => {
     if (r.allowInput) {
-      let puFlag = r.pu
-      if (props.strictMode) {
-        if (puFlag == "2") puFlag = "0"
-        if (puFlag == "3") puFlag = "1"
-      }
-      if (r.zi == "") {
-        r.status = -1
-      } else if (puFlag == "2" || puFlag == "3") {
-        r.status = 1
-      } else {
-        let truth = getPingZe(r.zi, props.book)
-        if (truth == -1 || truth == 2) {
-          r.status = truth
-        } else if (puFlag == "0" || /[a-z]/.test(puFlag)) {
-          r.status = truth == 0 ? 1 : 0
-        } else if (puFlag == "1" || /[A-Z]/.test(puFlag)) {
-          r.status = truth == 1 ? 1 : 0
-        }
-      }
+      r.status = yunService.checkPu(r.zi, props.book, r.pu, props.strictMode)
     }
   })
   updateYunStatus().forEach((v, k) => {

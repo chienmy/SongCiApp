@@ -14,9 +14,8 @@
 </template>
 
 <script setup lang="ts">
-import { NInput } from "naive-ui"
-import { InputInst } from 'naive-ui'
-import { ref, reactive, onMounted, computed, StyleValue } from "vue"
+import { NInput, InputInst } from "naive-ui"
+import { ref, onMounted, StyleValue } from "vue"
 
 const props = defineProps<{
   cellHeight?: number,
