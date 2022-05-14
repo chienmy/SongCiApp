@@ -48,7 +48,7 @@ const status = ref(-1)
 // 返回css样式
 const getPuStyle = (): StyleValue => {
   // 设置颜色
-  let colorList = ["black", "#c21f30", "#1a6840", "#d9a40e", "#c21f3033", "", "#d9a40e33"]
+  let colorList = ["black", "#c21f30", "#207f4c", "#d9a40e", "#c21f3033", "", "#d9a40e33"]
   return {
     width: cellWidth.value + 'pt',
     textAlign: 'center',

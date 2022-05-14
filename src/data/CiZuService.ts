@@ -55,7 +55,7 @@ class CiZuService {
 
   // 获得候选词组列表
   getWordList(char: string, pu: string, book: number) {
-    let wordList = this._ciZuMap.get(char.charAt(0))
+    let wordList = this._ciZuMap.get(char.charAt(0)) || []
     wordList = wordList.filter((w) => {
       let truth = yunService.getPingZe(w.word[1], book)
       if (! (pu == "2" || pu == "3")) {

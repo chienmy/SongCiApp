@@ -27,9 +27,9 @@
                   <n-grid-item :span="1">
                     <n-anchor ignore-gap>
                       <div v-for="i in 26" :key="i">
-                        <n-anchor-link v-if="allTagGroup.has(String.fromCharCode((97 + i)))"
-                                       :title="String.fromCharCode((65 + i))"
-                                       href="#" @click="updateTag(String.fromCharCode((97 + i)))"/>
+                        <n-anchor-link v-if="allTagGroup.has(String.fromCharCode((96 + i)))"
+                                       :title="String.fromCharCode((64 + i))"
+                                       href="#" @click="updateTag(String.fromCharCode((96 + i)))"/>
                       </div>
                     </n-anchor>
                   </n-grid-item>
