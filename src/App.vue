@@ -1,16 +1,18 @@
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
-    <route-view/>
-    <div style="text-align: center; padding: 15px;">
+    <n-message-provider>
+      <route-view/>
+      <div style="text-align: center; padding: 15px;">
       <span>
          助词 2022 · Made by <a href="https://github.com/chienmy/SongCiApp">Chienmy</a>
       </span>
-    </div>
+      </div>
+    </n-message-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
-import { GlobalThemeOverrides, NConfigProvider } from "naive-ui"
+import { GlobalThemeOverrides, NConfigProvider, NMessageProvider } from "naive-ui"
 import { Component, defineComponent, h } from "vue"
 import ChoosePage from './pages/ChoosePage.vue'
 import MainPage from './pages/MainPage.vue'

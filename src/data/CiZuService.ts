@@ -37,9 +37,6 @@ class CiZuService {
         count: c.count,
         needCheck: false,
       })
-      for (let [k, v] of this._ciZuMap) {
-        this._ciZuMap.set(k, v.sort((a, b) => (a.count > b.count ? -1 : 1)))
-      }
       //
       let nextCiZuList = []
       let arr = c.next_zi.split("|")
@@ -51,6 +48,9 @@ class CiZuService {
       }
       this._nextCiZuMap.set(c.word, nextCiZuList)
     })
+    for (let k of this._ciZuMap.keys()) {
+      this._ciZuMap.set(k, this._ciZuMap.get(k).sort((a, b) => (a.count > b.count ? -1 : 1)))
+    }
   }
 
   // 获得候选词组列表

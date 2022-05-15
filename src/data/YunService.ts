@@ -41,6 +41,8 @@ class YunService {
     }
     if (c == "") {
       return -1
+    } else if (escape(c).indexOf("%u")<0) {
+      return 0
     } else if (pu == "2" || pu == "3") {
       return 1
     } else {
@@ -61,7 +63,7 @@ class YunService {
     charList.forEach((c) => {
       let innerSet = new Set<string>()
       if (c.length != 0) {
-        this._yunMap.get(book + c).forEach((yun) => {
+        this._yunMap.get(book + c)?.forEach((yun) => {
           innerSet.add(yun.part)
         })
         possibleYun.push(innerSet)

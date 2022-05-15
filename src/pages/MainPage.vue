@@ -6,6 +6,23 @@
           <n-grid-item span="4 900:1">
             <h1>作词 - {{ ciPaiName }}</h1>
           </n-grid-item>
+          <n-grid-item span="4 900:3" style="display: flex; justify-content: flex-end; align-items: center">
+            <n-space align="center">
+              <n-button ghost color="#207f4c" @click="showModal = true">
+                说明
+              </n-button>
+              <n-button ghost color="#207f4c" @click="copyContent()">
+                复制
+              </n-button>
+              <n-button ghost color="#c21f30" @click="clearContent()">
+                清空
+              </n-button>
+              <n-button ghost color="#c21f30" @click="returnBack()">
+                返回
+              </n-button>
+            </n-space>
+            <ci-modal v-model:show="showModal"/>
+          </n-grid-item>
         </n-grid>
         <n-grid cols="1">
           <n-grid-item span="1" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px">
@@ -74,9 +91,10 @@
 </template>
 
 <script setup lang="ts">
-import { NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch } from "naive-ui"
-import CiInput from "../components/CiInput.vue"
+import { NButton, NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch, useMessage } from "naive-ui"
 import { onMounted, ref, reactive } from "vue"
+import CiInput from "../components/CiInput.vue"
+import CiModal from "../components/CiModal.vue"
 import { CiPu, ciPuService } from "../data/CiPuService"
 import { Word, ciZuService } from "../data/CiZuService"
 
@@ -123,12 +141,17 @@ const updateTab = (newTab: number) => {
 const contentMap = reactive(new Map<number, string>())
 onMounted(() => {
   ciPuIdList.forEach((v) => {
-    contentMap.set(v, "")
+    if (sessionStorage.getItem("ciPu" + v) != null) {
+      contentMap.set(v, sessionStorage.getItem("ciPu" + v))
+    } else {
+      contentMap.set(v, "")
+    }
   })
 })
 //
 const updateHandle = (content: string) => {
-  // console.log(content)
+  contentMap.set(ciPuTab.value, content)
+  sessionStorage.setItem("ciPu" + ciPuTab.value, content)
 }
 // 候选词列表
 const wordList = reactive(new Array<Word>())
@@ -139,7 +162,33 @@ const updateWordList = (searchChar: string, searchPu: string) => {
     ciZuService.getWordList(searchChar, searchPu, yunBook.value).forEach((w) => wordList.push(w))
   }
 }
-
+// 顶部按钮
+const message = useMessage()
+onMounted(() => {
+  message.info("离开页面前务必复制到本地保存", { duration: 3000 })
+})
+const handleCopy = (e: ClipboardEvent) => {
+  e.clipboardData && e.clipboardData.setData('text/plain', contentMap.get(ciPuTab.value));
+  e.preventDefault();
+  document.removeEventListener('copy', handleCopy);
+}
+const copyContent = () => {
+  document.addEventListener('copy', handleCopy);
+  if (document.execCommand('copy')) {
+    message.success("复制成功", { duration: 3000 })
+  } else {
+    message.error("复制失败", { duration: 3000 })
+  }
+}
+const clearContent = () => {
+  sessionStorage.removeItem("ciPu" + ciPuTab.value)
+  contentMap.set(ciPuTab.value, "")
+  wordList.length = 0
+}
+const showModal = ref(false)
+const returnBack = () => {
+  window.location.href = import.meta.env.BASE_URL
+}
 </script>
 
 <style scoped>

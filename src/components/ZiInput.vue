@@ -15,14 +15,19 @@
 
 <script setup lang="ts">
 import { NInput, InputInst } from "naive-ui"
-import { ref, onMounted, StyleValue } from "vue"
+import {ref, onMounted, StyleValue, watch, computed} from "vue"
 
 const props = defineProps<{
   cellHeight?: number,
   cellWidth?: number,
+  // 词谱
   pu: string,
+  // 输入框内字符
+  zi: string,
+  // 输入框索引编号
   index: number,
-  zi: string
+  // 校验状态
+  status: number
 }>()
 
 const emit = defineEmits<{
@@ -43,8 +48,6 @@ onMounted(() => {
   cellHeight.value = props.cellHeight || 28
   cellWidth.value = props.cellWidth || 28
 })
-// 当前状态
-const status = ref(-1)
 // 返回css样式
 const getPuStyle = (): StyleValue => {
   // 设置颜色
@@ -54,9 +57,9 @@ const getPuStyle = (): StyleValue => {
     textAlign: 'center',
     fontFamily: "CiPuSymbol",
     fontSize: '16pt',
-    color: colorList[status.value >= 2 ? status.value - 2: status.value + 1],
+    color: colorList[props.status >= 2 ? props.status - 2: props.status + 1],
     paddingTop: '3pt',
-    backgroundColor: status.value >= 2 ? colorList[status.value + 1] : "none",
+    backgroundColor: props.status >= 2 ? colorList[props.status + 1] : "#FFFFFF00",
   }
 }
 const getInputStyle = (): StyleValue => {
@@ -97,19 +100,20 @@ onMounted(() => {
 })
 // 更新事件
 const pu = ref("")
-const zi = ref("")
+const ziText = computed(() => {
+  return props.zi
+})
 onMounted(() => {
-  zi.value = props.zi
   pu.value = props.pu
 })
 const updateText = () => {
-  emit("update:zi", zi.value)
-  if (zi.value.length > 0) {
+  emit("update:zi", ziText.value)
+  if (ziText.value.length > 0) {
     emit("nextInput", props.index)
   }
 }
 const deleteEvent = () => {
-  if (zi.value.length == 0) {
+  if (ziText.value.length == 0) {
     emit("preInput", props.index)
   }
 }
@@ -123,9 +127,6 @@ const focus = () => {
 }
 
 defineExpose({
-  pu,
-  zi,
-  status,
   allowInput,
   focus
 })

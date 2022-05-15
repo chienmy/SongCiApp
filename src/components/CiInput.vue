@@ -1,9 +1,11 @@
 <template>
 <div v-for="(p, i) in paragraphList" :key="i" class="line-input">
   <zi-input v-for="(c, j) in p"
+            :key="getIndex(i, j)"
             :ref="el => addInput(el, getIndex(i, j))"
-            :pu="c"
             :index="getIndex(i, j)"
+            :status="statusList[getIndex(i, j)]"
+            :pu="c"
             v-model:zi="ziList[getIndex(i, j)]"
             @next-input="nextZi"
             @pre-input="preZi"
@@ -64,16 +66,46 @@ const getIndex = (row: number, column: number) => {
   return index + column
 }
 // 每个输入单元的内容
-const ziList = reactive(new Array<string>())
-onMounted(() => {
-  for (let s of props.pu || "") {
-    if (s != "|") {
-      if ("，。、".indexOf(s) != -1) {
-        ziList.push(s)
-      } else {
-        ziList.push("")
-      }
+const puText = props.pu.replace("|", "")
+const ziList = reactive(new Array<string>(puText.length))
+const initZiList = () => {
+  for (let i = 0; i < puText.length; i++) {
+    if ("，。、".indexOf(puText[i]) != -1) {
+      ziList[i] = puText[i]
+    } else {
+      ziList[i] = ""
     }
+  }
+}
+const statusList = reactive(new Array<number>(puText.length))
+const initStatusList = () => {
+  for (let i = 0; i < statusList.length; i++) {
+    statusList[i] = -1
+  }
+}
+// 韵部索引
+const yunIndexMap = new Map<string, Array<number>>()
+onMounted(() => {
+  let index = 0
+  for (let s of props.pu) {
+    if ("0123，。、".indexOf(s) === -1) {
+      if (! yunIndexMap.has(s)) {
+        yunIndexMap.set(s, new Array<number>())
+      }
+      yunIndexMap.get(s)?.push(index)
+    }
+    if (s != "|") index ++
+  }
+})
+onMounted(() => {
+  initStatusList()
+  if (props.content.length == puText.length) {
+    for (let i = 0; i < puText.length; i++) {
+      ziList[i] = props.content[i] == " " ? "" : props.content[i]
+    }
+    updateStatusList()
+  } else {
+    initZiList()
   }
 })
 // 文本框焦点移动
@@ -113,20 +145,6 @@ const onWordSearch = (index: number) => {
     emit("updateWords", "", "")
   }
 }
-// 韵部索引
-const yunIndexMap = new Map<string, Array<number>>()
-onMounted(() => {
-  let index = 0
-  for (let s of props.pu) {
-    if ("0123，。、".indexOf(s) === -1) {
-      if (! yunIndexMap.has(s)) {
-        yunIndexMap.set(s, new Array<number>())
-      }
-      yunIndexMap.get(s)?.push(index)
-    }
-    if (s != "|") index ++
-  }
-})
 const updateYunStatus = () => {
   let statusMap = new Map<string, Array<number>>()
   yunIndexMap.forEach((v, k) => {
@@ -136,18 +154,16 @@ const updateYunStatus = () => {
 }
 // 格律检查
 const updateStatusList = () => {
-  inputRefList.forEach((r) => {
-    if (r.allowInput) {
-      r.status = yunService.checkPu(r.zi, props.book, r.pu, props.strictMode)
-    }
+  ziList.forEach((zi, i) => {
+    statusList[i] = yunService.checkPu(zi, props.book, puText[i], props.strictMode)
   })
   updateYunStatus().forEach((v, k) => {
     v.forEach((status, i) => {
-      let ziInput = inputRefList[yunIndexMap.get(k)[i]]
-      if (ziInput.status == 0 || status == 0) {
-        ziInput.status = 3
-      } else if (ziInput.status == 2 || status == 2) {
-        ziInput.status = 5
+      let ziIndex = yunIndexMap.get(k)[i]
+      if (statusList[ziIndex] == 0 || status == 0) {
+        statusList[ziIndex] = 3
+      } else if (statusList[ziIndex] == 2 || status == 2) {
+        statusList[ziIndex] = 5
       }
     })
   })
@@ -174,7 +190,22 @@ watch(
       updateStatusList()
     }
 )
-
+watch(
+    () => props.strictMode,
+    (newVal, oldVal) => {
+      updateStatusList()
+    }
+)
+watch(
+    () => props.content,
+    (newVal, oldVal) => {
+      if (newVal.length == 0) {
+        initZiList()
+        initStatusList()
+        inputRefList[0]?.focus()
+      }
+    }
+)
 </script>
 
 <style scoped>
