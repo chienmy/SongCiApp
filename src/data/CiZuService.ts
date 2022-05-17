@@ -70,7 +70,6 @@ class CiZuService {
   }
 
   getNextWordList(text: string, pu: string, book: number): Word[] {
-    console.log(text, pu)
     let result = []
     if (this._nextCiZuMap.has(text)) {
       for (let w of this._nextCiZuMap.get(text)) {

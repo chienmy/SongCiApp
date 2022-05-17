@@ -2,7 +2,7 @@
   <div class="zi-input">
     <span :style="getPuStyle()">{{ getPuSymbol() }} </span>
     <div :style="getInputStyle()" class="content-input">
-      <n-input v-model:value="zi"
+      <n-input v-model:value="ziText"
                ref="inputRef"
                :disabled="! allowInput"
                @input="updateText"
@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { NInput, InputInst } from "naive-ui"
-import {ref, onMounted, StyleValue, watch, computed} from "vue"
+import { ref, onMounted, StyleValue, watch, computed } from "vue"
 
 const props = defineProps<{
   cellHeight?: number,
@@ -57,9 +57,9 @@ const getPuStyle = (): StyleValue => {
     textAlign: 'center',
     fontFamily: "CiPuSymbol",
     fontSize: '16pt',
-    color: colorList[props.status >= 2 ? props.status - 2: props.status + 1],
+    color: colorList[props.status > 2 ? props.status - 2: props.status + 1],
     paddingTop: '3pt',
-    backgroundColor: props.status >= 2 ? colorList[props.status + 1] : "#FFFFFF00",
+    backgroundColor: props.status > 2 ? colorList[props.status + 1] : "#FFFFFF00",
   }
 }
 const getInputStyle = (): StyleValue => {
@@ -100,12 +100,12 @@ onMounted(() => {
 })
 // 更新事件
 const pu = ref("")
-const ziText = computed(() => {
-  return props.zi
-})
+const ziText = ref("")
 onMounted(() => {
   pu.value = props.pu
+  ziText.value = props.zi
 })
+watch(() => props.zi, (newVal, oldVal) => {ziText.value = props.zi})
 const updateText = () => {
   emit("update:zi", ziText.value)
   if (ziText.value.length > 0) {

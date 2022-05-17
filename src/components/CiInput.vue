@@ -87,15 +87,13 @@ const initStatusList = () => {
 // 韵部索引
 const yunIndexMap = new Map<string, Array<number>>()
 onMounted(() => {
-  let index = 0
-  for (let s of props.pu) {
-    if ("0123，。、".indexOf(s) === -1) {
-      if (! yunIndexMap.has(s)) {
-        yunIndexMap.set(s, new Array<number>())
+  for (let i = 0; i < puText.length; i++) {
+    if (/[a-z]|[A-Z]/.test(puText[i])) {
+      if (! yunIndexMap.has(puText[i])) {
+        yunIndexMap.set(puText[i], new Array<number>())
       }
-      yunIndexMap.get(s)?.push(index)
+      yunIndexMap.get(puText[i])?.push(i)
     }
-    if (s != "|") index ++
   }
 })
 onMounted(() => {

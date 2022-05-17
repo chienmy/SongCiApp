@@ -5,12 +5,18 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({ command, mode }) => {
   if (command === 'serve') {
     return {
-      plugins: [vue()]
+      plugins: [vue()],
+      json: {
+        stringify: true
+      }
     }
   } else {
     return {
       plugins: [vue()],
-      base: "/SongCiApp/"
+      base: "/SongCiApp/",
+      json: {
+        stringify: true
+      }
     }
   }
 })
