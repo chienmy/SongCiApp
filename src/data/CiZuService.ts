@@ -17,7 +17,7 @@ export interface Word {
   id: number
   word: string
   count: number
-  needCheck: boolean
+  needCheck: boolean[]
 }
 
 class CiZuService {
@@ -35,7 +35,7 @@ class CiZuService {
         id: c.id,
         word: c.word,
         count: c.count,
-        needCheck: false,
+        needCheck: [],
       })
       //
       let nextCiZuList = []
@@ -56,18 +56,47 @@ class CiZuService {
   // 获得候选词组列表
   getWordList(char: string, pu: string, book: number) {
     let wordList = this._ciZuMap.get(char.charAt(0)) || []
-    wordList = wordList.filter((w) => {
-      let truth = yunService.getPingZe(w.word[1], book)
-      if (! (pu == "2" || pu == "3")) {
-        let target = (pu == "0" || /[a-z]/.test(pu)) ? 0 : 1
-        if (! (truth == 2 || target == truth)) {
-          return false
+    let result = []
+    for (let w of wordList) {
+      let truth = yunService.checkPu(w.word[1], book, pu, false)
+      if (truth <= 0) {
+        continue
+      }
+      w.needCheck = [false, truth == 2]
+      result.push(w)
+    }
+    if (result.length > 20) result.length = 20
+    return result
+  }
+
+  getNextWordList(text: string, pu: string, book: number): Word[] {
+    console.log(text, pu)
+    let result = []
+    if (this._nextCiZuMap.has(text)) {
+      for (let w of this._nextCiZuMap.get(text)) {
+        if (w.word.length > pu.length) {
+          continue
+        }
+        let checkFlag = new Array<boolean>()
+        for (let i = 0; i < pu.length; i++) {
+          let flag = yunService.checkPu(w.word[i], book, pu[i], false)
+          if (flag <= 0) {
+            break
+          } else {
+            checkFlag.push(flag == 2)
+          }
+        }
+        if (checkFlag.length == pu.length) {
+          result.push({
+            id: result.length,
+            word: w.word,
+            count: w.count,
+            needCheck: checkFlag
+          })
         }
       }
-      return true
-    })
-    if (wordList.length > 20) wordList.length = 20
-    return wordList
+    }
+    return result
   }
 }
 

@@ -64,24 +64,38 @@
                           :strict-mode="strictMode"
                           :content="contentMap.get(ciPuId) || ''"
                           @update-words="updateWordList"
+                          @update-next-words="updateNextWordList"
                           @update:content="updateHandle"/>
               </n-tab-pane>
             </n-tabs>
           </n-grid-item>
           <n-grid-item :span="wordListStatus ? 1 : 0">
-            <n-tabs value="word" type="line">
+            <n-tabs type="line" animated>
               <n-tab-pane name="word" tab="候选词" style="text-align: center">
                 <n-list v-if="wordList.length > 0" bordered>
                   <n-list-item v-for="item in wordList" style="padding: 6px 10px">
                     <span>{{ item.word[0] }}</span>
-                    <span :style="'color: ' + (item.needCheck ? 'darkorange' : 'green')">{{ item.word[1] }}</span>
+                    <span :style="getCheckStyle(item.needCheck[1])">{{ item.word[1] }}</span>
                     <n-tag size="small" round>{{ item.count }}</n-tag>
                   </n-list-item>
                 </n-list>
                 <span v-if="wordList.length === 0">暂无</span>
               </n-tab-pane>
-              <!--              <n-tab-pane name="nextZi" tab="下一字" style="text-align: center">-->
-              <!--              </n-tab-pane>-->
+              <n-tab-pane name="nextWord" tab="下一词" style="text-align: center">
+                <n-list v-if="nextWordList.length > 0" bordered>
+<!--                  <n-grid :cols="4">-->
+<!--                  <n-grid-item span="4 160:2">-->
+                  <n-list-item v-for="item in nextWordList" style="padding: 6px 10px">
+                    <span v-for="i in item.word.length" :style="getCheckStyle(item.needCheck[i - 1])">
+                      {{ item.word[i - 1] }}
+                    </span>
+                    <n-tag size="small" round>{{ item.count }}</n-tag>
+                  </n-list-item>
+<!--                  </n-grid-item>-->
+<!--                  </n-grid>-->
+                </n-list>
+                <span v-if="nextWordList.length === 0">暂无</span>
+              </n-tab-pane>
             </n-tabs>
           </n-grid-item>
         </n-grid>
@@ -92,7 +106,7 @@
 
 <script setup lang="ts">
 import { NButton, NCard, NGrid, NGridItem, NList, NListItem, NTabs, NTabPane, NTag, NSpace, NRadioGroup, NRadio, NSwitch, useMessage } from "naive-ui"
-import { onMounted, ref, reactive } from "vue"
+import {onMounted, ref, reactive, StyleValue} from "vue"
 import CiInput from "../components/CiInput.vue"
 import CiModal from "../components/CiModal.vue"
 import { CiPu, ciPuService } from "../data/CiPuService"
@@ -154,12 +168,24 @@ const updateHandle = (content: string) => {
   sessionStorage.setItem("ciPu" + ciPuTab.value, content)
 }
 // 候选词列表
+const rightTab = ref("word")
 const wordList = reactive(new Array<Word>())
-const nextZiList = reactive(new Array<Word>())
+const nextWordList = reactive(new Array<Word>())
 const updateWordList = (searchChar: string, searchPu: string) => {
   wordList.length = 0
   if (searchChar.length > 0) {
     ciZuService.getWordList(searchChar, searchPu, yunBook.value).forEach((w) => wordList.push(w))
+  }
+}
+const updateNextWordList = (searchText: string, searchPu: string) => {
+  nextWordList.length = 0
+  if (searchText.length > 0) {
+    ciZuService.getNextWordList(searchText, searchPu, yunBook.value).forEach((w) => nextWordList.push(w))
+  }
+}
+const getCheckStyle = (status: boolean): StyleValue => {
+  return {
+    color: status ? "#d9a40e" : "#207f4c"
   }
 }
 // 顶部按钮

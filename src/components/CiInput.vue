@@ -28,7 +28,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:content', content: string): void,
   // 更新候选词列表
-  (e: 'updateWords', searchChar: string, searchPu: string): void
+  (e: 'updateWords', searchChar: string, searchPu: string): void,
+  (e: 'updateNextWords', searchText: string, searchPu: string): void
 }>()
 
 // 分段落显示
@@ -140,9 +141,18 @@ const preZi = (index: number) => {
 // 向父组件发出更新候选词列表事件
 const onWordSearch = (index: number) => {
   if (index > 0 && inputRefList[index - 1].allowInput) {
-    emit("updateWords", ziList[index - 1], inputRefList[index].pu)
+    emit("updateWords", ziList[index - 1], puText[index])
   } else {
     emit("updateWords", "", "")
+  }
+  if (index > 1 && inputRefList[index - 1].allowInput && inputRefList[index - 2].allowInput) {
+    if (index < inputRefList.length - 1 && inputRefList[index + 1].allowInput) {
+      emit("updateNextWords", ziList[index - 2] + ziList[index - 1], puText.substring(index, index + 2))
+    } else {
+      emit("updateNextWords", ziList[index - 2] + ziList[index - 1], puText[index])
+    }
+  } else {
+    emit("updateNextWords", "", "")
   }
 }
 const updateYunStatus = () => {

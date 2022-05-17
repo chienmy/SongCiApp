@@ -34,6 +34,7 @@ class YunService {
     return result
   }
 
+  // 对照词谱校验，-1 默认；0 错误；1 正确；2 待检查
   checkPu(c: string, book: number, pu: string, strictMode: boolean) {
     if (strictMode) {
       if (pu == "2") pu = "0"
@@ -41,7 +42,7 @@ class YunService {
     }
     if (c == "") {
       return -1
-    } else if (escape(c).indexOf("%u")<0) {
+    } else if (escape(c).indexOf("%u") < 0) {
       return 0
     } else if (pu == "2" || pu == "3") {
       return 1
